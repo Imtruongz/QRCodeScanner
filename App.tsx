@@ -1,5 +1,12 @@
 import React, {useState} from 'react';
-import {Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {
+  Alert,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {
   Camera,
   useCameraDevices,
@@ -14,15 +21,42 @@ const App: React.FC = () => {
   const [isScanning, setIsScanning] = useState<boolean>(true);
   const [flashOn, setFlashOn] = useState<boolean>(false);
 
+  const scanFrameSize = 330; // Kích thước hình vuông của frame scan.
+  const windowWidth = Dimensions.get('window').width;
+  const windowHeight = Dimensions.get('window').height;
+
   const codeScanner = useCodeScanner({
-    codeTypes: ['qr'], // Các type QR code hỗ trợ (QR)
+    codeTypes: ['qr'], // Chỉ scan QR code
     onCodeScanned: codes => {
       if (isScanning && codes.length > 0) {
-        setIsScanning(false); // pause scan QR
-        console.log('Scanned Codes:', codes);
-        Alert.alert('Scanned QR Code', codes[0].value || 'No Data'); // show content
+        const scanFrameRect = {
+          x: windowWidth / 2 - scanFrameSize / 2,
+          y: windowHeight / 2 - scanFrameSize / 2,
+          width: scanFrameSize,
+          height: scanFrameSize,
+        };
+
+        // Lọc mã QR code nằm trong vùng scanFrame
+        const validCodes = codes.filter(code => {
+          const frame = code.frame; // Lấy frame từ code
+          if (!frame) {
+            return false; // Bỏ qua nếu frame là undefined
+          }
+          return (
+            frame.x >= scanFrameRect.x &&
+            frame.y >= scanFrameRect.y &&
+            frame.x + frame.width <= scanFrameRect.x + scanFrameRect.width &&
+            frame.y + frame.height <= scanFrameRect.y + scanFrameRect.height
+          );
+        });
+
+        if (validCodes.length > 0) {
+          setIsScanning(false); // Ngừng quét QR code
+          const qrContent = validCodes[0].value || 'No Data';
+          Alert.alert('Scanned QR Code', qrContent); // Hiển thị nội dung
+          console.log('Scanned Code:', validCodes[0].frame);
+        }
       }
-      console.log(`Scanned ${codes.length} codes!`);
     },
   });
 
