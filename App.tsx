@@ -1,6 +1,7 @@
-import React, {useState} from 'react';
+import React, {useState, useRef} from 'react';
 import {
   Dimensions,
+  Animated,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +15,8 @@ import {
   useCameraPermission,
 } from 'react-native-vision-camera';
 
+const {width: screenWidth, height: screenHeight} = Dimensions.get('screen');
+
 export type Frame = {
   x: number;
   y: number;
@@ -21,69 +24,42 @@ export type Frame = {
   height: number;
 };
 
-export interface CodeScannedType {
-  frame: Frame;
-  content: string;
-}
+export const initialFrame: Frame = {
+  x: (screenWidth - 280) / 2,
+  y: (screenHeight - 280) / 2,
+  width: 280,
+  height: 280,
+};
 
 const App: React.FC = () => {
   const devices = useCameraDevices();
   const device = getCameraDevice(devices, 'back');
+
   const {hasPermission, requestPermission} = useCameraPermission();
   const [isScanning, setIsScanning] = useState<boolean>(true);
   const [flashOn, setFlashOn] = useState<boolean>(false);
 
-  const [detectedFrame, setDetectedFrame] = useState<Frame>();
+  const [detectedFrame, setDetectedFrame] = useState<Frame>(initialFrame);
 
-  // const scanFrameSize = 330; // Kích thước hình vuông của frame scan.
-  // const windowWidth = Dimensions.get('window').width;
-  // const windowHeight = Dimensions.get('window').height;
-
-  // const codeScanner = useCodeScanner({
-  //   codeTypes: ['qr'], // Chỉ scan QR code
-  //   onCodeScanned: codes => {
-  //     if (isScanning && codes.length > 0) {
-  //       const scanFrameRect = {
-  //         x: cameraLayout.width / 2 - scanFrameSize / 2,
-  //         y: cameraLayout.height / 2 - scanFrameSize / 2,
-  //         width: scanFrameSize,
-  //         height: scanFrameSize,
-  //       };
-
-  //       // Lọc mã QR code nằm trong vùng scanFrame
-  //       const validCodes = codes.filter(code => {
-  //         const frame = code.frame; // Lấy frame từ code
-  //         if (!frame) {
-  //           return false; // Bỏ qua nếu frame là undefined
-  //         }
-  //         return (
-  //           frame.x >= scanFrameRect.x &&
-  //           frame.y >= scanFrameRect.y &&
-  //           frame.x + frame.width <= scanFrameRect.x + scanFrameRect.width &&
-  //           frame.y + frame.height <= scanFrameRect.y + scanFrameRect.height
-  //         );
-  //       });
-
-  //       if (validCodes.length > 0) {
-  //         setIsScanning(false); // Ngừng quét QR code
-  //         const qrFrame = validCodes[0].frame;
-  //         setDetectedFrame(qrFrame);
-  //         console.log('Scanned Code:', validCodes[0].frame);
-  //       }
-  //     }
-  //   },
-  // });
+  const animatedFramePosition = useRef(
+    new Animated.ValueXY(initialFrame),
+  ).current;
 
   const codeScanner = useCodeScanner({
-    codeTypes: ['qr'], // Các type QR code hỗ trợ (QR)
+    codeTypes: ['qr'],
     onCodeScanned: codes => {
       if (isScanning && codes.length > 0) {
-        setIsScanning(false); // pause scan QR
-        setDetectedFrame(codes[0].frame);
-        console.log(
-          'Scanned Codes:',
-          codes.filter(code => code.frame),
-        );
+        setIsScanning(false); // Pause scan
+        console.log('Scanned QR code:', codes[0]);
+        //Alert.alert('Scanned QR code:', codes[0].value);
+        const newFrame = codes[0].frame || initialFrame;
+
+        Animated.timing(animatedFramePosition, {
+          toValue: {x: newFrame.x - newFrame.width, y: newFrame.y},
+          duration: 500,
+          useNativeDriver: false,
+        }).start();
+        setDetectedFrame(newFrame);
       }
     },
   });
@@ -119,57 +95,89 @@ const App: React.FC = () => {
         codeScanner={codeScanner}
       />
       {detectedFrame && (
-        <View
-          style={{
-            position: 'absolute',
-            left: detectedFrame.x - detectedFrame.width,
-            top: detectedFrame.y,
-            width: detectedFrame.width + 20,
-            height: detectedFrame.height + 20,
-            borderWidth: 3,
-            borderColor: 'red',
-            backgroundColor: 'rgba(255, 0, 0, 0.2)',
-          }}
-        />
+        <Animated.View
+          style={[
+            styles.frame,
+            {
+              width: detectedFrame.width + 20,
+              height: detectedFrame.height + 20,
+              transform: [
+                {translateX: animatedFramePosition.x},
+                {translateY: animatedFramePosition.y},
+              ],
+            },
+          ]}>
+          {/* Bo góc */}
+          <View
+            style={[
+              styles.corner,
+              styles.topLeft,
+              {
+                width: detectedFrame.width * 0.22,
+                height: detectedFrame.height * 0.22,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.corner,
+              styles.topRight,
+              {
+                width: detectedFrame.width * 0.22,
+                height: detectedFrame.height * 0.22,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.corner,
+              styles.bottomLeft,
+              {
+                width: detectedFrame.width * 0.22,
+                height: detectedFrame.height * 0.22,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.corner,
+              styles.bottomRight,
+              {
+                width: detectedFrame.width * 0.22,
+                height: detectedFrame.height * 0.22,
+              },
+            ]}
+          />
+        </Animated.View>
       )}
 
       {/* Button control */}
-      <View style={styles.container}>
-        <View style={styles.overlay}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Scan QR Code</Text>
-          </View>
-          {/* Main */}
-          <View style={styles.main}>
-            <View style={styles.block1} />
-            <View style={styles.scanFrame} />
-      
-
-            <View style={styles.block2} />
-          </View>
-          {/* Footer */}
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.button]}
-              onPress={() => {
-                setIsScanning(!isScanning);
-              }}>
-              <Text style={styles.buttonText}>
-                {isScanning ? 'Scanning' : 'Start scan'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button]}
-              onPress={() => {
-                setFlashOn(!flashOn);
-              }}>
-              <Text style={styles.buttonText}>
-                {flashOn ? 'Turn Off Flash' : 'Turn On Flash'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+      <View style={styles.overlay}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Scan QR Code</Text>
+        </View>
+        <View style={styles.main} />
+        <View style={styles.footer}>
+          {/* scan btn */}
+          <TouchableOpacity
+            style={[styles.button]}
+            onPress={() => {
+              setIsScanning(!isScanning);
+            }}>
+            <Text style={styles.buttonText}>
+              {isScanning ? 'Scanning' : 'Start scan'}
+            </Text>
+          </TouchableOpacity>
+          {/* flash btn */}
+          <TouchableOpacity
+            style={[styles.button]}
+            onPress={() => {
+              setFlashOn(!flashOn);
+            }}>
+            <Text style={styles.buttonText}>
+              {flashOn ? 'Turn Off Flash' : 'Turn On Flash'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     </>
@@ -179,9 +187,6 @@ const App: React.FC = () => {
 export default App;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   overlay: {
     flex: 1,
     justifyContent: 'center',
@@ -190,47 +195,59 @@ const styles = StyleSheet.create({
   header: {
     flex: 1,
     alignItems: 'center',
-    color: 'white',
-    width: '100%',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   main: {
     flex: 2,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  block1: {
-    width: 120,
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  },
-  block2: {
-    width: 120,
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   footer: {
     flex: 1,
     alignItems: 'center',
-    width: '100%',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  frame: {
+    position: 'absolute',
+  },
+  corner: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    borderColor: 'white',
+    backgroundColor: 'transparent',
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 8,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 8,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 8,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 8,
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: 'bold',
     color: 'white',
-  },
-  scanFrame: {
-    width: 330,
-    height: 330,
-    borderWidth: 3,
-    borderRadius: 8,
-    borderColor: 'white',
-    borderStyle: 'solid',
   },
   permissionsContainer: {
     flex: 1,
