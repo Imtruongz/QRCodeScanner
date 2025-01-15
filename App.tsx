@@ -1,6 +1,5 @@
 import React, {useState} from 'react';
 import {
-  Alert,
   Dimensions,
   StyleSheet,
   Text,
@@ -14,6 +13,19 @@ import {
   getCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
+
+export type Frame = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export interface CodeScannedType {
+  frame: Frame;
+  content: string;
+}
+
 const App: React.FC = () => {
   const devices = useCameraDevices();
   const device = getCameraDevice(devices, 'back');
@@ -21,41 +33,57 @@ const App: React.FC = () => {
   const [isScanning, setIsScanning] = useState<boolean>(true);
   const [flashOn, setFlashOn] = useState<boolean>(false);
 
-  const scanFrameSize = 330; // Kích thước hình vuông của frame scan.
-  const windowWidth = Dimensions.get('window').width;
-  const windowHeight = Dimensions.get('window').height;
+  const [detectedFrame, setDetectedFrame] = useState<Frame>();
+
+  // const scanFrameSize = 330; // Kích thước hình vuông của frame scan.
+  // const windowWidth = Dimensions.get('window').width;
+  // const windowHeight = Dimensions.get('window').height;
+
+  // const codeScanner = useCodeScanner({
+  //   codeTypes: ['qr'], // Chỉ scan QR code
+  //   onCodeScanned: codes => {
+  //     if (isScanning && codes.length > 0) {
+  //       const scanFrameRect = {
+  //         x: cameraLayout.width / 2 - scanFrameSize / 2,
+  //         y: cameraLayout.height / 2 - scanFrameSize / 2,
+  //         width: scanFrameSize,
+  //         height: scanFrameSize,
+  //       };
+
+  //       // Lọc mã QR code nằm trong vùng scanFrame
+  //       const validCodes = codes.filter(code => {
+  //         const frame = code.frame; // Lấy frame từ code
+  //         if (!frame) {
+  //           return false; // Bỏ qua nếu frame là undefined
+  //         }
+  //         return (
+  //           frame.x >= scanFrameRect.x &&
+  //           frame.y >= scanFrameRect.y &&
+  //           frame.x + frame.width <= scanFrameRect.x + scanFrameRect.width &&
+  //           frame.y + frame.height <= scanFrameRect.y + scanFrameRect.height
+  //         );
+  //       });
+
+  //       if (validCodes.length > 0) {
+  //         setIsScanning(false); // Ngừng quét QR code
+  //         const qrFrame = validCodes[0].frame;
+  //         setDetectedFrame(qrFrame);
+  //         console.log('Scanned Code:', validCodes[0].frame);
+  //       }
+  //     }
+  //   },
+  // });
 
   const codeScanner = useCodeScanner({
-    codeTypes: ['qr'], // Chỉ scan QR code
+    codeTypes: ['qr'], // Các type QR code hỗ trợ (QR)
     onCodeScanned: codes => {
       if (isScanning && codes.length > 0) {
-        const scanFrameRect = {
-          x: windowWidth / 2 - scanFrameSize / 2,
-          y: windowHeight / 2 - scanFrameSize / 2,
-          width: scanFrameSize,
-          height: scanFrameSize,
-        };
-
-        // Lọc mã QR code nằm trong vùng scanFrame
-        const validCodes = codes.filter(code => {
-          const frame = code.frame; // Lấy frame từ code
-          if (!frame) {
-            return false; // Bỏ qua nếu frame là undefined
-          }
-          return (
-            frame.x >= scanFrameRect.x &&
-            frame.y >= scanFrameRect.y &&
-            frame.x + frame.width <= scanFrameRect.x + scanFrameRect.width &&
-            frame.y + frame.height <= scanFrameRect.y + scanFrameRect.height
-          );
-        });
-
-        if (validCodes.length > 0) {
-          setIsScanning(false); // Ngừng quét QR code
-          const qrContent = validCodes[0].value || 'No Data';
-          Alert.alert('Scanned QR Code', qrContent); // Hiển thị nội dung
-          console.log('Scanned Code:', validCodes[0].frame);
-        }
+        setIsScanning(false); // pause scan QR
+        setDetectedFrame(codes[0].frame);
+        console.log(
+          'Scanned Codes:',
+          codes.filter(code => code.frame),
+        );
       }
     },
   });
@@ -90,6 +118,20 @@ const App: React.FC = () => {
         torch={flashOn ? 'on' : 'off'}
         codeScanner={codeScanner}
       />
+      {detectedFrame && (
+        <View
+          style={{
+            position: 'absolute',
+            left: detectedFrame.x - detectedFrame.width,
+            top: detectedFrame.y,
+            width: detectedFrame.width + 20,
+            height: detectedFrame.height + 20,
+            borderWidth: 3,
+            borderColor: 'red',
+            backgroundColor: 'rgba(255, 0, 0, 0.2)',
+          }}
+        />
+      )}
 
       {/* Button control */}
       <View style={styles.container}>
@@ -102,6 +144,8 @@ const App: React.FC = () => {
           <View style={styles.main}>
             <View style={styles.block1} />
             <View style={styles.scanFrame} />
+      
+
             <View style={styles.block2} />
           </View>
           {/* Footer */}
