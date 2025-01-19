@@ -16,7 +16,6 @@ import {
   getCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import Svg, {Line} from 'react-native-svg';
 import ButtonComponent from './components/ButtonComponent';
@@ -91,14 +90,22 @@ const App: React.FC = () => {
       if (isScanning && codes.length > 0) {
         // Nếu đang scanning và có code thì dừng scan ( setIsScanning(false) )
         setIsScanning(false); // Pause scan
-        console.log('Scanned QR code:', codes[0].corners); //Codes là 1 mảng các mã QR code, vì set điều kiện nên chỉ nhận mã QR của đầu tiên và duy nhất
-        console.log('Scanned QR code:', codes[0].frame?.width); //Frame là 1 object chứa 4 góc của QR code
+        console.log('Scanned QR code:', codes[0]); //Codes là 1 mảng các mã QR code, vì set điều kiện nên chỉ nhận mã QR của đầu tiên và duy nhất
+        console.log(
+          'Scanned QR code:',
+          codes[0].frame?.width
+            ? codes[0].frame?.width - 60
+            : codes[0].frame?.width,
+        ); //Frame là 1 object chứa 4 góc của QR code
         console.log('frame width', frame.width, 'frame height', frame.height);
+        let widthCode = codes[0].frame?.width
+          ? codes[0].frame?.width - 60
+          : codes[0].frame?.width ?? 0;
         //Set giá trị của 4 góc vào state
         if (codes[0].corners && codes[0].frame) {
           //Top Left
           const newCornerTopLeft = {
-            x: codes[0].corners[0].x - codes[0].frame.width,
+            x: codes[0].corners[0].x - codes[0].frame.width - widthCode,
             y: codes[0].corners[0].y,
           };
           setCornerTopLeft(newCornerTopLeft);
@@ -109,12 +116,12 @@ const App: React.FC = () => {
                 (newCornerTopLeft.x + codes[0].frame.width),
               y: codes[0].corners[0].y - newCornerTopLeft.y,
             },
-            duration: 500,
-            useNativeDriver: false,
+            duration: 600,
+            useNativeDriver: true,
           }).start();
           //Top Right
           const newCornerTopRight = {
-            x: codes[0].corners[1].x - codes[0].frame.width,
+            x: codes[0].corners[1].x - codes[0].frame.width - widthCode,
             y: codes[0].corners[1].y,
           };
           setCornerTopRight(newCornerTopRight);
@@ -126,12 +133,12 @@ const App: React.FC = () => {
               y: codes[0].corners[1].y - newCornerTopRight.y,
             },
             duration: 500,
-            useNativeDriver: false,
+            useNativeDriver: true,
           }).start();
 
           //Bottom Right
           const newCornerBottomRight = {
-            x: codes[0].corners[2].x - codes[0].frame.width,
+            x: codes[0].corners[2].x - codes[0].frame.width - widthCode,
             y: codes[0].corners[2].y,
           };
           setCornerBottomRight(newCornerBottomRight);
@@ -143,12 +150,12 @@ const App: React.FC = () => {
               y: codes[0].corners[2].y - newCornerBottomRight.y,
             },
             duration: 500,
-            useNativeDriver: false,
+            useNativeDriver: true,
           }).start();
 
           //Bottom Left
           const newCornerBottomLeft = {
-            x: codes[0].corners[3].x - codes[0].frame.width,
+            x: codes[0].corners[3].x - codes[0].frame.width - widthCode,
             y: codes[0].corners[3].y,
           };
           setCornerBottomLeft(newCornerBottomLeft);
@@ -160,16 +167,10 @@ const App: React.FC = () => {
               y: codes[0].corners[3].y - newCornerBottomLeft.y,
             },
             duration: 500,
-            useNativeDriver: false,
+            useNativeDriver: true,
           }).start();
         }
       }
-    },
-    regionOfInterest: {
-      x: 0.1,
-      y: 0.22,
-      width: 0.8,
-      height: 0.43,
     },
   });
 
@@ -195,7 +196,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <>
+    <SafeAreaView style={{flex: 1, borderWidth: 1, borderColor: 'white'}}>
       <Camera
         style={StyleSheet.absoluteFill}
         device={device}
@@ -203,70 +204,56 @@ const App: React.FC = () => {
         torch={flashOn ? 'on' : 'off'}
         codeScanner={codeScanner}
       />
-      {cornerTopLeft && (
-        <Animated.View
+      {/* {cornerTopLeft && (
+        <View
           style={{
             position: 'absolute',
             top: cornerTopLeft.y,
             left: cornerTopLeft.x,
+            borderWidth: 2,
             borderColor: 'red',
             backgroundColor: 'transparent',
-            transform: [
-              {translateX: animatedCornerTopLeft.x},
-              {translateY: animatedCornerTopLeft.y},
-            ],
           }}
         />
       )}
       {cornerTopRight && (
-        <Animated.View
+        <View
           style={{
             position: 'absolute',
             top: cornerTopRight.y,
             left: cornerTopRight.x,
+            borderWidth: 2,
             borderColor: 'blue',
             backgroundColor: 'transparent',
-            transform: [
-              {translateX: animatedCornerTopRight.x},
-              {translateY: animatedCornerTopRight.y},
-            ],
           }}
         />
       )}
       {cornerBottomRight && (
-        <Animated.View
+        <View
           style={{
             position: 'absolute',
             top: cornerBottomRight.y,
             left: cornerBottomRight.x,
+            borderWidth: 2,
             borderColor: 'green',
             backgroundColor: 'transparent',
-            transform: [
-              {translateX: animatedCornerBottomRight.x},
-              {translateY: animatedCornerBottomRight.y},
-            ],
           }}
         />
       )}
       {cornerBottomLeft && (
-        <Animated.View
+        <View
           style={{
             position: 'absolute',
             top: cornerBottomLeft.y,
             left: cornerBottomLeft.x,
+            borderWidth: 2,
             borderColor: 'yellow',
             backgroundColor: 'transparent',
-            transform: [
-              {translateX: animatedCornerBottomLeft.x},
-              {translateY: animatedCornerBottomLeft.y},
-            ],
           }}
         />
-      )}
+      )} */}
 
-      {/* Hình tứ giác */}
       <Svg style={StyleSheet.absoluteFill}>
-        {/* Top Left -> Top Right */}
         <AnimatedLine
           x1={cornerTopLeft.x}
           y1={cornerTopLeft.y}
@@ -274,36 +261,56 @@ const App: React.FC = () => {
           y2={cornerTopRight.y}
           stroke="red"
           strokeWidth="2"
+          transform={[
+            {translateX: animatedCornerTopLeft.x},
+            {translateY: animatedCornerTopLeft.y},
+            {translateX: animatedCornerTopRight.x},
+            {translateY: animatedCornerTopRight.y},
+          ]}
         />
-        {/* Top Right -> Bottom Right */}
-        <Line
+        <AnimatedLine
           x1={cornerTopRight.x}
           y1={cornerTopRight.y}
           x2={cornerBottomRight.x}
           y2={cornerBottomRight.y}
           stroke="red"
           strokeWidth="2"
+          transform={[
+            {translateX: animatedCornerTopRight.x},
+            {translateY: animatedCornerTopRight.y},
+            {translateX: animatedCornerBottomRight.x},
+            {translateY: animatedCornerBottomRight.y},
+          ]}
         />
-        {/* Bottom Right -> Bottom Left */}
-        <Line
+        <AnimatedLine
           x1={cornerBottomRight.x}
           y1={cornerBottomRight.y}
           x2={cornerBottomLeft.x}
           y2={cornerBottomLeft.y}
           stroke="red"
           strokeWidth="2"
+          transform={[
+            {translateX: animatedCornerBottomRight.x},
+            {translateY: animatedCornerBottomRight.y},
+            {translateX: animatedCornerBottomLeft.x},
+            {translateY: animatedCornerBottomLeft.y},
+          ]}
         />
-        {/* Bottom Left -> Top Left */}
-        <Line
+        <AnimatedLine
           x1={cornerBottomLeft.x}
           y1={cornerBottomLeft.y}
           x2={cornerTopLeft.x}
           y2={cornerTopLeft.y}
           stroke="red"
           strokeWidth="2"
+          transform={[
+            {translateX: animatedCornerBottomLeft.x},
+            {translateY: animatedCornerBottomLeft.y},
+            {translateX: animatedCornerTopLeft.x},
+            {translateY: animatedCornerTopLeft.y},
+          ]}
         />
       </Svg>
-      {/* Button control */}
       <View style={styles.overlay}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Scan QR Code</Text>
@@ -332,7 +339,7 @@ const App: React.FC = () => {
           />
         </View>
       </View>
-    </>
+    </SafeAreaView>
   );
 };
 
@@ -341,11 +348,9 @@ export default App;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: '100%',
-    height: '100%',
     position: 'relative',
     borderWidth: 1,
-    borderColor: 'white',
+    borderColor: 'red',
   },
   camera: {
     position: 'absolute',
