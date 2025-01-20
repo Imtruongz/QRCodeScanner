@@ -5,7 +5,6 @@ import {
   Animated,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
   SafeAreaView,
 } from 'react-native';
@@ -19,6 +18,8 @@ import {
 
 import Svg, {Line} from 'react-native-svg';
 import ButtonComponent from './components/ButtonComponent';
+import RequestPermission from './components/RequestPermission';
+import Error from './components/Error';
 
 const {width: screenWidth, height: screenHeight} = Dimensions.get('screen');
 
@@ -176,23 +177,16 @@ const App: React.FC = () => {
 
   if (!hasPermission) {
     return (
-      <View style={styles.permissionsContainer}>
-        <Text>Camera Permission Required</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={async () => await requestPermission()}>
-          <Text style={styles.buttonText}>Request Permission</Text>
-        </TouchableOpacity>
-      </View>
+      <RequestPermission
+        title="Camera Permission Required"
+        content="Request Permission"
+        onPress={async () => await requestPermission()}
+      />
     );
   }
 
   if (device == null) {
-    return (
-      <View style={styles.permissionsContainer}>
-        <Text>No Camera Device Found</Text>
-      </View>
-    );
+    return <Error />;
   }
 
   return (
@@ -260,7 +254,8 @@ const App: React.FC = () => {
           x2={cornerTopRight.x}
           y2={cornerTopRight.y}
           stroke="red"
-          strokeWidth="2"
+          strokeWidth="4"
+          strokeOpacity={0.5}
           transform={[
             {translateX: animatedCornerTopLeft.x},
             {translateY: animatedCornerTopLeft.y},
@@ -274,7 +269,8 @@ const App: React.FC = () => {
           x2={cornerBottomRight.x}
           y2={cornerBottomRight.y}
           stroke="red"
-          strokeWidth="2"
+          strokeWidth="4"
+          strokeOpacity={0.5}
           transform={[
             {translateX: animatedCornerTopRight.x},
             {translateY: animatedCornerTopRight.y},
@@ -288,7 +284,8 @@ const App: React.FC = () => {
           x2={cornerBottomLeft.x}
           y2={cornerBottomLeft.y}
           stroke="red"
-          strokeWidth="2"
+          strokeWidth="4"
+          strokeOpacity={0.5}
           transform={[
             {translateX: animatedCornerBottomRight.x},
             {translateY: animatedCornerBottomRight.y},
@@ -302,7 +299,8 @@ const App: React.FC = () => {
           x2={cornerTopLeft.x}
           y2={cornerTopLeft.y}
           stroke="red"
-          strokeWidth="2"
+          strokeWidth="4"
+          strokeOpacity={0.5}
           transform={[
             {translateX: animatedCornerBottomLeft.x},
             {translateY: animatedCornerBottomLeft.y},
@@ -382,12 +380,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
   },
-  permissionsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-  },
   button: {
     width: 70,
     height: 70,
@@ -398,13 +390,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-  },
-
   corner: {
     position: 'absolute',
     width: 50,
