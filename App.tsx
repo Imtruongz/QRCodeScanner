@@ -1,5 +1,5 @@
 /* eslint-disable react-native/no-inline-styles */
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {
   Dimensions,
   Animated,
@@ -24,9 +24,10 @@ import Error from './components/Error';
 
 const {width: screenWidth, height: screenHeight} = Dimensions.get('screen');
 
+console.log('screenWidth', screenWidth, 'screenHeight', screenHeight);
+
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
-//Góc
 export type Corner = {
   x: number;
   y: number;
@@ -79,23 +80,13 @@ const App: React.FC = () => {
     new Animated.ValueXY(initialCornerBottomRight),
   ).current;
 
+  const [qrFrame, setQrFrame] = useState({width: 0, height: 0});
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes, frame) => {
       if (isScanning && codes.length > 0) {
         setIsScanning(false); // Pause scan
         setIsQRCodeDetected(true);
-        // setTimeout(() => {
-        //   Alert.alert('Scanned code detected', codes[0].value, [
-        //     {
-        //       text: 'OK',
-        //       onPress: () => {
-        //         setIsScanning(true);
-        //         setIsQRCodeDetected(false);
-        //       },
-        //     },
-        //   ]);
-        // }, 1000);
         console.log('Scanned QR code:', codes[0]);
         console.log(
           'Scanned QR code:',
@@ -104,25 +95,26 @@ const App: React.FC = () => {
             : codes[0].frame?.width,
         ); //Frame là 1 object chứa 4 góc của QR code
         console.log('frame width', frame.width, 'frame height', frame.height);
+        setQrFrame({width: frame.width, height: frame.height});
         // let widthCode = codes[0].frame?.width
         //   ? codes[0].frame?.width - 60
         //   : codes[0].frame?.width ?? 0;
         if (codes[0].corners && codes[0].frame) {
           const newCornerTopLeft = {
-            x: codes[0].corners[0].x - 50,
-            y: codes[0].corners[0].y + 60,
+            x: codes[0].corners[0].x,
+            y: codes[0].corners[0].y,
           };
           const newCornerTopRight = {
-            x: codes[0].corners[1].x - 50,
-            y: codes[0].corners[1].y + 60,
+            x: codes[0].corners[1].x,
+            y: codes[0].corners[1].y,
           };
           const newCornerBottomRight = {
-            x: codes[0].corners[2].x - 50,
-            y: codes[0].corners[2].y + 60,
+            x: codes[0].corners[2].x,
+            y: codes[0].corners[2].y,
           };
           const newCornerBottomLeft = {
-            x: codes[0].corners[3].x - 50,
-            y: codes[0].corners[3].y + 60,
+            x: codes[0].corners[3].x,
+            y: codes[0].corners[3].y,
           };
           Animated.parallel([
             Animated.timing(animatedCornerTopLeft, {
@@ -159,6 +151,14 @@ const App: React.FC = () => {
   //   }
   // }, [isQRCodeDetected]);
 
+  const toggleFlash = useCallback(() => {
+    setFlashOn(prev => !prev);
+  }, []);
+
+  const toggleScan = useCallback(() => {
+    setIsScanning(prev => !prev);
+  }, []);
+
   if (!hasPermission) {
     return (
       <RequestPermission
@@ -174,16 +174,19 @@ const App: React.FC = () => {
   }
 
   return (
-    <SafeAreaView
-      style={{flex: 1, width: screenWidth, borderWidth: 1}}>
+    <>
       <Camera
-        style={{
-          flex: 1,
-        }}
+        // style={{
+        //   backgroundColor: 'transparent',
+        //   borderWidth: 1,
+        //   borderColor: 'red',
+        // }}
+        style={StyleSheet.absoluteFill}
         device={device}
         isActive={true}
         torch={flashOn ? 'on' : 'off'}
         codeScanner={codeScanner}
+        resizeMode="cover"
       />
 
       <Svg style={StyleSheet.absoluteFill}>
@@ -194,7 +197,6 @@ const App: React.FC = () => {
           y2={animatedCornerTopRight.y}
           stroke={isQRCodeDetected ? 'green' : 'red'}
           strokeWidth="6"
-          strokeDashoffset={5}
           //strokeDasharray={[55, 180]}
           strokeLinecap="round"
         />
@@ -205,7 +207,6 @@ const App: React.FC = () => {
           y2={animatedCornerBottomRight.y}
           stroke={isQRCodeDetected ? 'green' : 'red'}
           strokeWidth="6"
-          strokeDashoffset={5}
           //strokeDasharray={[55, 180]}
           strokeLinecap="round"
         />
@@ -244,10 +245,24 @@ const App: React.FC = () => {
         </View>
         <View
           style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: qrFrame.width,
+            height: qrFrame.height,
+            borderColor: 'yellow',
+            borderWidth: 3,
+          }}>
+          <Text style={{color: 'white'}}>
+            QR Frame: {qrFrame.width} x {qrFrame.height}
+          </Text>
+        </View>
+        <View
+          style={{
             flex: 1,
             flexDirection: 'row',
             justifyContent: 'space-around',
-            alignItems: 'flex-end',
+            alignItems: 'center',
           }}>
           <ButtonComponent
             iconName={flashOn ? 'flashlight-on' : 'flashlight-off'}
@@ -255,7 +270,7 @@ const App: React.FC = () => {
             iconColor="white"
             bgColor={flashOn ? 'gray' : 'rgba(0, 0, 0, 0.5)'}
             onPress={() => {
-              setFlashOn(!flashOn);
+              toggleFlash();
             }}
           />
           <ButtonComponent
@@ -264,12 +279,12 @@ const App: React.FC = () => {
             iconColor="white"
             bgColor={isScanning ? 'rgba(0, 0, 0, 0.5)' : 'gray'}
             onPress={() => {
-              setIsScanning(!isScanning);
+              toggleScan();
             }}
           />
         </View>
       </View>
-    </SafeAreaView>
+    </>
   );
 };
 
