@@ -78,11 +78,24 @@ const App: React.FC = () => {
     new Animated.ValueXY(initialCornerBottomRight),
   ).current;
 
+  const [qrFrame, setQrFrame] = useState({width: 0, height: 0});
+
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
+    // Vị trí top left and width height of frame
+    regionOfInterest: {
+      x: 0,
+      y: 0,
+      width: 320,
+      height: 240,
+    },
+    //Main code
     onCodeScanned: (codes, frame) => {
-      //onCodeScanned se thuc hien scanning khi co ma qr trong khung hinh(frame)
-      setIsQRCodeDetected(true);// set trang thai focus vao
+      //Codes: là giá trị width, height, frame, corners của mã QR code
+      //Frame: là giá trị width, height của khung quét QR code camera
+      console.log('scanning qr code');//Log ra scanning lien tuc khi ma thay ma QR code trong frame
+      setIsQRCodeDetected(true); // set trang thai da tim thay qr
+
       if (qrTimeoutRef.current) {
         clearTimeout(qrTimeoutRef.current);
       }
@@ -119,6 +132,7 @@ const App: React.FC = () => {
         setIsQRCodeDetected(true);
         console.log('Scanned QR code:', codes[0].corners);
         console.log('frame width', frame.width, 'frame height', frame.height);
+        setQrFrame({width: frame.width, height: frame.height});
         // let widthCode = codes[0].frame?.width
         //   ? codes[0].frame?.width - 60
         //   : codes[0].frame?.width ?? 0;
@@ -166,14 +180,6 @@ const App: React.FC = () => {
     },
   });
 
-  // useEffect(() => {
-  //   if (isQRCodeDetected) {
-  //     setTimeout(() => {
-  //       setIsQRCodeDetected(false);
-  //     }, 3000);
-  //   }
-  // }, [isQRCodeDetected]);
-
   const toggleFlash = useCallback(() => {
     setFlashOn(prev => !prev);
   }, []);
@@ -200,6 +206,7 @@ const App: React.FC = () => {
     <SafeAreaView style={{flex: 1, borderWidth: 1, borderColor: 'white'}}>
       <Camera
         style={StyleSheet.absoluteFill}
+        //style={{width: qrFrame.width, height: qrFrame.height}}
         device={device}
         isActive={true}
         torch={flashOn ? 'on' : 'off'}
