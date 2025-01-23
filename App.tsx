@@ -1,19 +1,13 @@
 /* eslint-disable react-native/no-inline-styles */
 import React, {useState, useRef, useCallback} from 'react';
-import {
-  Dimensions,
-  Animated,
-  StyleSheet,
-  View,
-  Text,
-  SafeAreaView,
-} from 'react-native';
+import {Dimensions, Animated, StyleSheet, View, Text} from 'react-native';
 import {
   Camera,
   useCameraDevices,
   useCodeScanner,
   getCameraDevice,
   useCameraPermission,
+  useFrameProcessor,
 } from 'react-native-vision-camera';
 
 import Svg, {Line} from 'react-native-svg';
@@ -24,7 +18,7 @@ import Error from './components/Error';
 
 const {width: screenWidth, height: screenHeight} = Dimensions.get('screen');
 
-console.log('screenWidth', screenWidth, 'screenHeight', screenHeight);
+console.log('screen Width', screenWidth, 'screen Height', screenHeight);
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
@@ -55,6 +49,20 @@ const App: React.FC = () => {
   const devices = useCameraDevices();
   const device = getCameraDevice(devices, 'back');
 
+  // const format = useCameraFormat(device, [
+  //   {videoResolution: {width: screenWidth, height: screenHeight}}, // Video 16:9 ở độ phân giải 1280x720
+  //   {photoResolution: {width: screenWidth, height: screenHeight}},
+  //   {videoAspectRatio: screenHeight / screenWidth}, // Có tỷ lệ gần giống 16:9
+  //   {photoAspectRatio: screenHeight / screenWidth},
+  //   {fps: 30}, // 30 khung hình mỗi giây
+  // ]);
+
+  const frameProcessor = useFrameProcessor(frame => {
+    'worklet';
+    console.log(`Frame: ${frame.width}x${frame.height} (${frame.pixelFormat})`);
+  
+  }, []);
+
   const {hasPermission, requestPermission} = useCameraPermission();
   const [isScanning, setIsScanning] = useState<boolean>(true);
   const [flashOn, setFlashOn] = useState<boolean>(false);
@@ -83,17 +91,23 @@ const App: React.FC = () => {
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     // Vị trí top left and width height of frame
+    // regionOfInterest: {
+    //   x: 0,
+    //   y: 0,
+    //   width: screenWidth,
+    //   height: screenHeight,
+    // },
     regionOfInterest: {
-      x: 0,
-      y: 0,
-      width: 320,
-      height: 240,
+      x: screenWidth * 0.1,
+      y: screenHeight * 0.25,
+      width: screenWidth * 0.8,
+      height: screenHeight * 0.4,
     },
     //Main code
     onCodeScanned: (codes, frame) => {
       //Codes: là giá trị width, height, frame, corners của mã QR code
       //Frame: là giá trị width, height của khung quét QR code camera
-      console.log('scanning qr code');//Log ra scanning lien tuc khi ma thay ma QR code trong frame
+      //console.log('scanning qr code');//Log ra scanning lien tuc khi ma thay ma QR code trong frame
       setIsQRCodeDetected(true); // set trang thai da tim thay qr
 
       if (qrTimeoutRef.current) {
@@ -131,7 +145,14 @@ const App: React.FC = () => {
         setIsScanning(false); // Pause scan
         setIsQRCodeDetected(true);
         console.log('Scanned QR code:', codes[0].corners);
-        console.log('frame width', frame.width, 'frame height', frame.height);
+        console.log(
+          'frame width camera',
+          frame.width,
+          'frame height camera',
+          frame.height,
+        );
+        //const scaleX = screenWidth / frame.width;
+        //const scaleY = screenHeight / frame.height;
         setQrFrame({width: frame.width, height: frame.height});
         // let widthCode = codes[0].frame?.width
         //   ? codes[0].frame?.width - 60
@@ -203,14 +224,16 @@ const App: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={{flex: 1, borderWidth: 1, borderColor: 'white'}}>
+    <View style={StyleSheet.absoluteFill}>
       <Camera
         style={StyleSheet.absoluteFill}
-        //style={{width: qrFrame.width, height: qrFrame.height}}
         device={device}
         isActive={true}
         torch={flashOn ? 'on' : 'off'}
         codeScanner={codeScanner}
+        //format={format}
+        frameProcessor={frameProcessor}
+        //resizeMode='contain'
       />
       <Svg style={StyleSheet.absoluteFill}>
         <AnimatedLine
@@ -294,7 +317,7 @@ const App: React.FC = () => {
           />
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
