@@ -7,7 +7,6 @@ import {
   useCodeScanner,
   getCameraDevice,
   useCameraPermission,
-  useFrameProcessor,
 } from 'react-native-vision-camera';
 
 import Svg, {Line} from 'react-native-svg';
@@ -57,11 +56,11 @@ const App: React.FC = () => {
   //   {fps: 30}, // 30 khung hình mỗi giây
   // ]);
 
-  const frameProcessor = useFrameProcessor(frame => {
-    'worklet';
-    console.log(`Frame: ${frame.width}x${frame.height} (${frame.pixelFormat})`);
-  
-  }, []);
+  // const frameProcessor = useFrameProcessor(frame => {
+  //   'worklet';
+  //   console.log(`Frame: ${frame.width}x${frame.height} (${frame.pixelFormat})`);
+
+  // }, []);
 
   const {hasPermission, requestPermission} = useCameraPermission();
   const [isScanning, setIsScanning] = useState<boolean>(true);
@@ -90,19 +89,6 @@ const App: React.FC = () => {
 
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
-    // Vị trí top left and width height of frame
-    // regionOfInterest: {
-    //   x: 0,
-    //   y: 0,
-    //   width: screenWidth,
-    //   height: screenHeight,
-    // },
-    regionOfInterest: {
-      x: screenWidth * 0.1,
-      y: screenHeight * 0.25,
-      width: screenWidth * 0.8,
-      height: screenHeight * 0.4,
-    },
     //Main code
     onCodeScanned: (codes, frame) => {
       //Codes: là giá trị width, height, frame, corners của mã QR code
@@ -144,35 +130,36 @@ const App: React.FC = () => {
       if (isScanning && codes.length > 0) {
         setIsScanning(false); // Pause scan
         setIsQRCodeDetected(true);
-        console.log('Scanned QR code:', codes[0].corners);
+        console.log('Scanned QR code:', codes[0].corners, codes[0].frame);
         console.log(
           'frame width camera',
           frame.width,
           'frame height camera',
           frame.height,
         );
-        //const scaleX = screenWidth / frame.width;
-        //const scaleY = screenHeight / frame.height;
+        const scaleX = screenWidth / frame.width;
+        const scaleY = screenHeight / frame.height;
+        console.log('scaleX', scaleX, 'scaleY', scaleY);
         setQrFrame({width: frame.width, height: frame.height});
         // let widthCode = codes[0].frame?.width
         //   ? codes[0].frame?.width - 60
         //   : codes[0].frame?.width ?? 0;
         if (codes[0].corners && codes[0].frame) {
           const newCornerTopLeft = {
-            x: codes[0].corners[0].x,
-            y: codes[0].corners[0].y,
+            x: codes[0].corners[0].x * scaleX,
+            y: codes[0].corners[0].y * scaleY,
           };
           const newCornerTopRight = {
-            x: codes[0].corners[1].x,
-            y: codes[0].corners[1].y,
+            x: codes[0].corners[1].x * scaleX,
+            y: codes[0].corners[1].y * scaleY,
           };
           const newCornerBottomRight = {
-            x: codes[0].corners[2].x,
-            y: codes[0].corners[2].y,
+            x: codes[0].corners[0].x * scaleX,
+            y: codes[0].corners[2].y * scaleY,
           };
           const newCornerBottomLeft = {
-            x: codes[0].corners[3].x,
-            y: codes[0].corners[3].y,
+            x: codes[0].corners[1].x * scaleX,
+            y: codes[0].corners[3].y * scaleY,
           };
           Animated.parallel([
             Animated.timing(animatedCornerTopLeft, {
@@ -232,8 +219,8 @@ const App: React.FC = () => {
         torch={flashOn ? 'on' : 'off'}
         codeScanner={codeScanner}
         //format={format}
-        frameProcessor={frameProcessor}
-        //resizeMode='contain'
+        //frameProcessor={frameProcessor}
+        //resizeMode="contain"
       />
       <Svg style={StyleSheet.absoluteFill}>
         <AnimatedLine
