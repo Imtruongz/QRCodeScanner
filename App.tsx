@@ -8,7 +8,6 @@ import {
   getCameraDevice,
   useCameraPermission,
   useCameraFormat,
-  Templates,
 } from 'react-native-vision-camera';
 
 import Svg, {Line, Path} from 'react-native-svg';
@@ -64,12 +63,17 @@ const App: React.FC = () => {
   const devices = useCameraDevices();
   const device = getCameraDevice(devices, 'back');
 
-  const format = useCameraFormat(device, Templates.Video);
+  const format = useCameraFormat(device, [
+    {videoResolution: {width: 1280, height: 720}},
+  ]);
 
   const {hasPermission, requestPermission} = useCameraPermission();
   const [isScanning, setIsScanning] = useState<boolean>(true);
   const [flashOn, setFlashOn] = useState<boolean>(false);
   const [isQRCodeDetected, setIsQRCodeDetected] = useState(false);
+
+  const [frameWidth, setFrameWidth] = useState(0);
+  const [frameHeight, setFrameHeight] = useState(0);
 
   const qrTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Tham chiếu timeout để reset
 
@@ -130,25 +134,13 @@ const App: React.FC = () => {
       if (isScanning && codes.length > 0) {
         setIsScanning(false); // Pause scan
         setIsQRCodeDetected(true);
-        console.log('Scanned QR code:', codes[0].corners, codes[0].frame);
+        setFrameWidth(frame.width);
+        setFrameHeight(frame.height);
         console.log(
-          'frame width camera',
-          frame.width,
-          'frame height camera',
-          frame.height,
+          'Scanned QR code:',
+          JSON.stringify(codes[0], null, 2),
+          JSON.stringify(frame, null, 2),
         );
-        // const scaleX = screenWidth / frame.width;
-        // const scaleY = screenHeight / frame.height;
-        // console.log('scaleX', scaleX, 'scaleY', scaleY);
-        // setQrFrame({
-        //   x: codes[0].frame?.x ?? initialQRFrame.x,
-        //   y: codes[0].frame?.y ?? initialQRFrame.y,
-        //   width: codes[0].frame?.width ?? initialQRFrame.width,
-        //   height: codes[0].frame?.height ?? initialQRFrame.height,
-        // });
-        // let widthCode = codes[0].frame?.width
-        //   ? codes[0].frame?.width - 60
-        //   : codes[0].frame?.width ?? 0;
         if (codes[0].corners && codes[0].frame) {
           const newCornerTopLeft = {
             x: codes[0].corners[0].x,
@@ -264,7 +256,10 @@ const App: React.FC = () => {
         />
       </Svg>
 
-      <Svg style={StyleSheet.absoluteFill}>
+      <Svg
+        style={[StyleSheet.absoluteFill, styles.abc]}
+        preserveAspectRatio="xMidYMid slice"
+        viewBox={`0 0 ${frameHeight} ${frameWidth}`}>
         <AnimatedLine
           x1={animatedCornerTopLeft.x}
           y1={animatedCornerTopLeft.y}
@@ -394,5 +389,10 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  abc: {
+    borderWidth: 1,
+    borderColor: 'red',
+    borderStyle: 'solid',
   },
 });
