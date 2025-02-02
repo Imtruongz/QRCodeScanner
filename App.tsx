@@ -98,7 +98,12 @@ const App: React.FC = () => {
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes, frame) => {
-      setIsQRCodeDetected(true); // set trang thai da tim thay qr
+      if (codes.length === 0 || codes.length > 1) return;
+
+      const qrCode = codes[0];
+
+      if (qrCode.corners === undefined) return;
+
 
       if (qrTimeoutRef.current) {
         clearTimeout(qrTimeoutRef.current);
@@ -131,56 +136,57 @@ const App: React.FC = () => {
         ]).start();
       }, 500);
 
-      if (isScanning && codes.length > 0) {
+      const topLeftCorner = qrCode.corners[0];
+      const topRightCorner = qrCode.corners[1];
+      const bottomRightCorner = qrCode.corners[2];
+      const bottomLeftCorner = qrCode.corners[3];
+
+      const isCodeInRegionOfInterest =
+        // topleft
+        topLeftCorner.x >= initialCornerTopLeft.x &&
+        topLeftCorner.y >= initialCornerTopLeft.y &&
+        // topRight
+        topRightCorner.x <= initialCornerTopRight.x &&
+        topRightCorner.y >= initialCornerTopRight.y &&
+        // bottomRight
+        bottomRightCorner.x <= initialCornerBottomRight.x &&
+        bottomRightCorner.y <= initialCornerBottomRight.y &&
+        // bottomLeft
+        bottomLeftCorner.x >= initialCornerBottomLeft.x &&
+        bottomLeftCorner.y <= initialCornerBottomLeft.y;
+
+      if (isScanning && isCodeInRegionOfInterest) {
         setIsScanning(false); // Pause scan
         setIsQRCodeDetected(true);
         setFrameWidth(frame.width);
         setFrameHeight(frame.height);
         console.log(
           'Scanned QR code:',
-          JSON.stringify(codes[0], null, 2),
+          JSON.stringify(qrCode, null, 2),
           JSON.stringify(frame, null, 2),
         );
-        if (codes[0].corners && codes[0].frame) {
-          const newCornerTopLeft = {
-            x: codes[0].corners[0].x,
-            y: codes[0].corners[0].y,
-          };
-          const newCornerTopRight = {
-            x: codes[0].corners[1].x,
-            y: codes[0].corners[1].y,
-          };
-          const newCornerBottomRight = {
-            x: codes[0].corners[2].x,
-            y: codes[0].corners[2].y,
-          };
-          const newCornerBottomLeft = {
-            x: codes[0].corners[3].x,
-            y: codes[0].corners[3].y,
-          };
-          Animated.parallel([
-            Animated.timing(animatedCornerTopLeft, {
-              toValue: newCornerTopLeft,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(animatedCornerTopRight, {
-              toValue: newCornerTopRight,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(animatedCornerBottomRight, {
-              toValue: newCornerBottomRight,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(animatedCornerBottomLeft, {
-              toValue: newCornerBottomLeft,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ]).start();
-        }
+        Animated.parallel([
+          Animated.timing(animatedCornerTopLeft, {
+            toValue: topLeftCorner,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animatedCornerTopRight, {
+            toValue: topRightCorner,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animatedCornerBottomRight, {
+            toValue: bottomRightCorner,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animatedCornerBottomLeft, {
+            toValue: bottomLeftCorner,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
       }
     },
   });
@@ -257,7 +263,7 @@ const App: React.FC = () => {
       </Svg>
 
       <Svg
-        style={[StyleSheet.absoluteFill, styles.abc]}
+        style={StyleSheet.absoluteFill}
         preserveAspectRatio="xMidYMid slice"
         viewBox={`0 0 ${frameHeight} ${frameWidth}`}>
         <AnimatedLine
@@ -389,10 +395,5 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-  },
-  abc: {
-    borderWidth: 1,
-    borderColor: 'red',
-    borderStyle: 'solid',
   },
 });
