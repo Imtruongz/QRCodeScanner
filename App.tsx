@@ -1,6 +1,6 @@
 /* eslint-disable react-native/no-inline-styles */
 import React, {useState, useRef, useCallback} from 'react';
-import {Dimensions, Animated, StyleSheet, View, Text} from 'react-native';
+import {Dimensions, Animated, StyleSheet, View, Text, SafeAreaView, Alert} from 'react-native';
 import {
   Camera,
   useCameraDevices,
@@ -25,20 +25,6 @@ const AnimatedLine = Animated.createAnimatedComponent(Line);
 export type Corner = {
   x: number;
   y: number;
-};
-
-export type QRFrame = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
-export const initialQRFrame = {
-  x: 0,
-  y: 0,
-  width: 0,
-  height: 0,
 };
 
 //vi tri ban dau cua corner
@@ -92,19 +78,16 @@ const App: React.FC = () => {
   const animatedCornerBottomRight = useRef(
     new Animated.ValueXY(initialCornerBottomRight),
   ).current;
-
-  //const [qrFrame, setQrFrame] = useState<QRFrame>(initialQRFrame);
-
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes, frame) => {
-      if (codes.length === 0 || codes.length > 1) return;
-
       const qrCode = codes[0];
-
-      if (qrCode.corners === undefined) return;
-
-
+      if (codes.length === 0 || codes.length > 1) {
+        return;
+      }
+      if (qrCode.corners === undefined) {
+        return;
+      }
       if (qrTimeoutRef.current) {
         clearTimeout(qrTimeoutRef.current);
       }
@@ -165,6 +148,8 @@ const App: React.FC = () => {
           JSON.stringify(qrCode, null, 2),
           JSON.stringify(frame, null, 2),
         );
+        //Alert for QR Code
+        
         Animated.parallel([
           Animated.timing(animatedCornerTopLeft, {
             toValue: topLeftCorner,
@@ -186,7 +171,9 @@ const App: React.FC = () => {
             duration: 300,
             useNativeDriver: true,
           }),
-        ]).start();
+        ]).start(() => {
+          Alert.alert('QR Code scanned', qrCode.value);
+        });
       }
     },
   });
@@ -214,7 +201,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <View style={{flex: 1}}>
+    <SafeAreaView style={{flex: 1}}>
       <Camera
         style={StyleSheet.absoluteFill}
         device={device}
@@ -222,6 +209,7 @@ const App: React.FC = () => {
         torch={flashOn ? 'on' : 'off'}
         codeScanner={codeScanner}
         format={format}
+        fps={30}
       />
       <Svg style={[StyleSheet.absoluteFill, {zIndex: 10}]}>
         {/* Top right */}
@@ -382,18 +370,8 @@ const App: React.FC = () => {
           />
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 export default App;
-
-export const styles = StyleSheet.create({
-  svgOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-});
