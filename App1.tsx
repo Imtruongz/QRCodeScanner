@@ -1,3 +1,4 @@
+/* eslint-disable no-lone-blocks */
 /* eslint-disable react-native/no-inline-styles */
 import React, {useState, useRef, useCallback} from 'react';
 import {
@@ -25,6 +26,8 @@ import RequestPermission from './components/RequestPermission';
 import Error from './components/Error';
 
 const {width: screenWidth, height: screenHeight} = Dimensions.get('screen');
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 export type Corner = {
@@ -59,30 +62,42 @@ const App: React.FC = () => {
   ]);
 
   const {hasPermission, requestPermission} = useCameraPermission();
-  const [isScanning, setIsScanning] = useState(true);
-  const [flashOn, setFlashOn] = useState(false);
+  const [isScanning, setIsScanning] = useState<boolean>(true);
+  const [flashOn, setFlashOn] = useState<boolean>(false);
   const [isQRCodeDetected, setIsQRCodeDetected] = useState(false);
 
-  const [frameWidth, setFrameWidth] = useState(0);
-  const [frameHeight, setFrameHeight] = useState(0);
+  const [frameWidth, setFrameWidth] = useState(640);
+  const [frameHeight, setFrameHeight] = useState(480);
 
-  const useAnimatedCorner = (initialCorner: Corner) =>
-    useRef(new Animated.ValueXY(initialCorner)).current;
+  const [qrCodeWidth, setQrCodeWidth] = useState(0);
+  const [qrCodeHeight, setQrCodeHeight] = useState(0);
 
-  const animatedCornerTopLeft = useAnimatedCorner(initialCornerTopLeft);
-  const animatedCornerTopRight = useAnimatedCorner(initialCornerTopRight);
-  const animatedCornerBottomLeft = useAnimatedCorner(initialCornerBottomLeft);
-  const animatedCornerBottomRight = useAnimatedCorner(initialCornerBottomRight);
+  //const qrTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Tham chiếu timeout để reset
 
-  const isProcessingQRCode = useRef(false);
+  const isProcessingQRCode = useRef(false); // Biến kiểm soát đảm bảo xử lý 1 lần
 
+  const animatedCornerTopLeft = useRef(
+    new Animated.ValueXY(initialCornerTopLeft),
+  ).current;
+
+  const animatedCornerTopRight = useRef(
+    new Animated.ValueXY(initialCornerTopRight),
+  ).current;
+
+  const animatedCornerBottomLeft = useRef(
+    new Animated.ValueXY(initialCornerBottomLeft),
+  ).current;
+
+  const animatedCornerBottomRight = useRef(
+    new Animated.ValueXY(initialCornerBottomRight),
+  ).current;
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: (codes, frame) => {
       const qrCode = codes[0];
       if (isProcessingQRCode.current) {
         return;
-      }
+      } // Ngăn gọi lại nếu đang xử lý
       isProcessingQRCode.current = true;
       if (codes.length === 0 || codes.length > 1) {
         return;
@@ -90,11 +105,44 @@ const App: React.FC = () => {
       if (qrCode.corners === undefined) {
         return;
       }
+      // if (qrTimeoutRef.current) {
+      //   clearTimeout(qrTimeoutRef.current);
+      // }
+      // qrTimeoutRef.current = setTimeout(() => {
+      //   setIsQRCodeDetected(false); // Reset trạng thái
+      //   setIsScanning(true); // Tiếp tục quét
+      //   //Reset vị trí của các góc
+      //   Animated.parallel([
+      //     Animated.timing(animatedCornerTopLeft, {
+      //       toValue: initialCornerTopLeft,
+      //       duration: 300,
+      //       useNativeDriver: true,
+      //     }),
+      //     Animated.timing(animatedCornerTopRight, {
+      //       toValue: initialCornerTopRight,
+      //       duration: 300,
+      //       useNativeDriver: true,
+      //     }),
+      //     Animated.timing(animatedCornerBottomRight, {
+      //       toValue: initialCornerBottomRight,
+      //       duration: 300,
+      //       useNativeDriver: true,
+      //     }),
+      //     Animated.timing(animatedCornerBottomLeft, {
+      //       toValue: initialCornerBottomLeft,
+      //       duration: 300,
+      //       useNativeDriver: true,
+      //     }),
+      //   ]).start();
+      // }, 500);
 
       const topLeftCorner = qrCode.corners[0];
       const topRightCorner = qrCode.corners[1];
       const bottomRightCorner = qrCode.corners[2];
       const bottomLeftCorner = qrCode.corners[3];
+
+      setQrCodeWidth(qrCode.frame?.width || 0);
+      setQrCodeHeight(qrCode.frame?.height || 0);
 
       const isCodeInRegionOfInterest =
         // topleft
@@ -115,7 +163,6 @@ const App: React.FC = () => {
         setIsQRCodeDetected(true);
         setFrameWidth(frame.width);
         setFrameHeight(frame.height);
-
         Animated.parallel([
           Animated.timing(animatedCornerTopLeft, {
             toValue: topLeftCorner,
@@ -216,42 +263,46 @@ const App: React.FC = () => {
         format={format}
         fps={30}
       />
-      <Svg style={[StyleSheet.absoluteFill, {zIndex: 10}]}>
+      <Svg
+        style={[StyleSheet.absoluteFill, {zIndex: 10}]}
+        preserveAspectRatio="xMidYMid slice"
+        viewBox={`0 0 ${frameHeight} ${frameWidth}`}>
         {/* Top right */}
-        <Path
+        <AnimatedPath
           fill-rule="evenodd"
           clip-rule="evenodd"
           d="M-42.5 0C-42.5 -1.38071 -41.38071 -2.5 -40 -2.5H-20C-7.5736 -2.5 2.5 7.5736 2.5 20V40C2.5 41.3807 1.38071 42.5 0 42.5C-1.38071 42.5 -2.5 41.3807 -2.5 40V20C-2.5 10.335 -10.335 2.5 -20 2.5H-40C-41.38071 2.5 -42.5 1.38071 -42.5 0Z"
-          fill="white"
-          x={initialCornerTopRight.x}
-          y={initialCornerTopRight.y}
+          fill={isQRCodeDetected ? 'green' : 'white'}
+          //transform="scale(0.2)"
+          x={animatedCornerTopRight.x}
+          y={animatedCornerTopRight.y}
         />
         {/* Top left */}
-        <Path
+        <AnimatedPath
           fill-rule="evenodd"
           clip-rule="evenodd"
           d="M0 42.5C-1.38071 42.5 -2.5 41.3807 -2.5 40L-2.500001 20C-2.500002 7.5736 7.5736 -2.5 20 -2.500001L40 -2.500002C41.3807 -2.500002 42.5 -1.38071 42.5 0C42.5 1.38071 41.3807 2.5 40 2.5L20 2.5C10.335 2.5 2.5 10.335 2.5 20L2.5 40C2.5 41.3807 1.38071 42.5 0 42.5Z"
-          fill="white"
-          x={initialCornerTopLeft.x}
-          y={initialCornerTopLeft.y}
+          fill={isQRCodeDetected ? 'green' : 'white'}
+          x={animatedCornerTopLeft.x}
+          y={animatedCornerTopLeft.y}
         />
         {/* Bottom right */}
-        <Path
+        <AnimatedPath
           fill-rule="evenodd"
           clip-rule="evenodd"
           d="M0 -42.5C1.3807 -42.5 2.5 -41.38071 2.5 -40L2.5 -20C2.5 -7.5736 -7.5736 2.5 -20 2.5L-40 2.5C-41.38071 2.5 -42.500002 1.3807 -42.500002 0C-42.500002 -1.3807 -41.38071 -2.5 -40 -2.5L-20 -2.5C-10.335 -2.5 -2.5 -10.335 -2.5 -20L-2.5 -40C-2.5 -41.38071 -1.3807 -42.5 0 -42.5Z"
-          fill="white"
-          x={initialCornerBottomRight.x}
-          y={initialCornerBottomRight.y}
+          fill={isQRCodeDetected ? 'green' : 'white'}
+          x={animatedCornerBottomRight.x}
+          y={animatedCornerBottomRight.y}
         />
         {/* Bottom left */}
-        <Path
+        <AnimatedPath
           fill-rule="evenodd"
           clip-rule="evenodd"
           d="M42.5 0C42.5 1.3807 41.3807 2.5 40 2.5L20 2.5C7.5736 2.5 -2.499999 -7.5736 -2.499998 -20L-2.499996 -40C-2.499996 -41.38071 -1.38071 -42.500004 0 -42.500004C1.38072 -42.500004 2.5 -41.38071 2.5 -40L2.5 -20C2.5 -10.335 10.335 -2.5 20 -2.5L40 -2.5C41.3807 -2.5 42.5 -1.3807 42.5 0Z"
-          fill="white"
-          x={initialCornerBottomLeft.x}
-          y={initialCornerBottomLeft.y}
+          fill={isQRCodeDetected ? 'green' : 'white'}
+          x={animatedCornerBottomLeft.x}
+          y={animatedCornerBottomLeft.y}
         />
       </Svg>
 
